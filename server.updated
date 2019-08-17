@@ -1,0 +1,47 @@
+import socket
+import time
+
+
+try:
+    PORT = int(input("Enter the port number: "))
+except ValueError:
+    print("Invalid Port number")
+else:
+    if (PORT < 1024 or PORT > 64000):
+        print("Port number outside range")
+
+try:
+    s = socket.socket()
+    s.bind((socket.gethostname(), PORT))
+except socket.error:
+    print("Error initialising socket")
+
+try:
+    s.listen(1) #queue limit for acceptions 
+    print("waiting for connections..")
+except:
+    pass
+else:
+    print("Error while waiting for connection")
+
+
+
+while True:
+    conn, addr = s.accept()
+    
+    print(addr, "has connected to the server at", str(time.time))
+
+    fileRequest = conn.recv(88)
+    file_name = fileRequest[5:]
+    file_name = arrayname.decode('utf-8') + '.txt'
+    print(file_name)
+    
+    #filename = input(str("enter the filename: :"))
+    file = open(file_name, 'rb')
+    file_data = file.read(4096)
+    conn.send(file_data)
+    print("data has been transmitted succesfully")
+    file.close()
+    print("file closed")
+    conn.close()
+    break
