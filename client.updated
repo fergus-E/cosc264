@@ -1,0 +1,67 @@
+import socket
+
+
+IP = input(str("Enter IP address in dotted decimal format or the server hostname: "))
+for i in range(0, len(IP)):
+    if (IP[i].isnumeric() != True and IP[i] != '.'):
+        try:
+            IP = socket.gethostbyname(IP)
+        except socket.error:
+            print("Invalid IP/Host name entry")
+    break
+
+try:
+    PORT = int(input("Enter the port number: "))
+except ValueError:
+    print("Invalid Port number")
+else:
+    if (PORT < 1024 or PORT > 64000):
+        print("Port number outside range")
+
+HOST = input(str("Please enter the host of the sender: "))
+print("Host accepted")
+
+try:
+    s = socket.socket()
+except socket.error:
+    print("Could not create socket")
+    
+try:
+    s.connect((HOST, PORT))
+except socket.error:
+    print("Failed to connect to server")
+    s.close()
+
+
+fixedRequestHeader = '497E01'
+poop = fixedRequestHeader.encode('utf-8')
+name = input(str("Enter the file to be requested: "))
+nameArray = name.encode('utf-8')
+size = str(len(nameArray))
+fha = bytearray(len(nameArray) + 5)
+if int(size) > 255:
+    size1 = int(size[:2])
+    size2 = int(size[2:])
+else:
+    size1 = 0
+    size2 = int(size)    
+
+
+fha[0] = 73
+fha[1] = 126
+fha[2] = 1
+fha[3] = size1
+fha[4] = size2
+j = 5
+for i in range(0,9):
+    fha[j] = nameArray[i]
+    j += 1
+
+s.send(fha)   
+
+filename = input(str("Enter name of incoming file: "))
+file = open(filename, 'wb')
+file_data = s.recv(1024)
+file.write(file_data)
+file.close()
+print("file successfully received")
