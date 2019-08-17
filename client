@@ -1,0 +1,29 @@
+import socket
+s = socket.socket()
+HOST = input(str("Please enter the host of the sender"))
+PORT = input(int("Enter the Port number"))
+s.connect((HOST, PORT))
+
+fixedRequestHeader = 0x497E01
+
+filename = input(str("Enter the filename"))
+filenameLen = len(filename)
+
+hexLen = hex(filenameLen)
+if (len(hexLen[2:]) % 2  == 1):
+    hexLen = '0x0' + hexLen[2:]
+
+for i in range(0, len(requestHex)-1, 2):
+    hexVal = requestHex[i:i+1]
+    intVal = int(hexVal, 16)
+    
+    
+file_data = file.read(40)
+conn.send(file_data)
+
+
+file = open(filename, 'wb')
+file_data = s.recv(124)
+file.write(file_data)
+file.close()
+print("file successfully received")
