@@ -1,18 +1,31 @@
 import socket
 
 s = socket.socket()
-PORT = input(int())
 HOST = socket.gethostname()
-s.bind((HOST PORT))
-s.listen()
+print(HOST)
+PORT = int(input("Enter the port number: "))
+s.bind((HOST, PORT))
+s.listen(1)
 print("waiting for connections..")
-conn addr =s.accept()
-print(addr "has connected to the server")
+conn, addr = s.accept()
 
-filename = input(str("Please enter the filename"))
+while True:
+    
+    print(addr, "has connected to the server")
 
-file = open(filename 'rb')
-file_data = file.read(40)
-conn.send(file_data)
-
-
+    bop = conn.recv(50)
+    
+    arrayname = bop[5:]
+    name = arrayname.decode('utf-8') + '.txt'
+    print(name)
+    
+    #filename = input(str("enter the filename: :"))
+    file = open(name, 'rb')
+    file_data = file.read(1024)
+    conn.send(file_data)
+    print("data has been transmitted succesfully")
+    file.close()
+    print("file closed")
+    conn.close()
+    break
+    
