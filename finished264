@@ -1,0 +1,199 @@
+  
+import socket
+import sys
+
+try:
+    IP = sys.argv[1]
+    IP = socket.gethostbyname(IP)
+    socket.inet_aton(IP)
+except IndexError:
+    sys.exit("Incorrect number of arguments entered")
+
+except:
+    sys.exit("Invalid IP/Host name entry")
+
+try:
+    PORT = int(sys.argv[2]) 
+except ValueError:
+    sys.exit("Invalid Port number")
+except IndexError:
+    sys.exit("Incorrect number of arguments entered")
+else:
+    if (int(sys.argv[2]) < 1024 or int(sys.argv[2]) > 64000):
+        sys.exit("Port number outside range")
+
+try:
+    HOST = sys.argv[3]
+except IndexError:
+    sys.exit("Incorrect number of arguments entered")
+except socket.gaierror:
+    sys.exit("Error connecting to Host")    
+except:
+    sys.exit("Error with host entered")
+
+try:
+    s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    s.settimeout(1)
+except:
+    sys.exit("Could not create socket")
+    
+try:
+    s.connect((HOST, PORT))
+except:
+    sys.exit("Failed to connect to server")
+
+
+
+fixedRequestHeader = '497E01'
+poop = fixedRequestHeader.encode('utf-8')
+name = input(str("Enter the file to be requested: "))
+nameArray = name.encode('utf-8')
+size = str(len(nameArray))
+fileRequest = bytearray(len(nameArray) + 5)
+if int(size) > 255:
+    size1 = int(size[:2])
+    size2 = int(size[2:])
+else:
+    size1 = 0
+    size2 = int(size)    
+
+
+fileRequest[0] = 73
+fileRequest[1] = 126
+fileRequest[2] = 1
+fileRequest[3] = size1
+fileRequest[4] = size2
+j = 5
+for i in range(0,len(nameArray)):
+    fileRequest[j] = nameArray[i]
+    j += 1
+
+s.send(fileRequest)   
+size = ''
+try:
+    frp = s.recv(32)
+except socket.timeout:
+    sys.exit("Socket timeout")
+if (frp[0] == 73 and frp[1] == 126 and frp[2] == 2):
+    if frp[3] == 1:
+        for i in range(4, 8, 1):
+            size += str(hex(frp[i])[2:])
+        size = int(size, 16)
+    else: 
+        sys.exit("Problem opening the requested file on the server")
+else:
+    sys.exit("Problem with the file request record sent to server")
+
+while True:
+    filename = input(str("Enter name of incoming file: "))
+    file = open(filename, 'wb')    
+    try:
+        block = s.recv(4096)
+    except socket.timeout:
+        sys.exit("Socket timeout")
+    bitcount = len(block)
+    while block: 
+        file.write(block)
+        try:
+            block = s.recv(4096)
+        except socket.timeout:
+            sys.exit("Socket timeout")        
+        bitcount += len(block)
+    if size != bitcount:
+        sys.exit("The number of bits received is not equal to the number of bits indicated in the file response header")
+    file.close()
+    print("File successfully received and " + str(size) + " bits were written to: " + filename)
+    break
+    
+    import socket
+import datetime
+import sys
+import os
+
+try:
+    PORT = int(sys.argv[1])
+except ValueError:
+    sys.exit("Invalid Port number")
+else:
+    if (int(sys.argv[1]) < 1024 or int(sys.argv[1]) > 64000):
+        sys.exit("Port number outside range")
+
+try:
+    s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    s.bind((socket.gethostname(), PORT))
+except socket.error:
+    sys.exit("Error initialising socket")
+
+
+s.listen(0)  
+print("Server is waiting for connections..")
+fileResponse = bytearray(4)
+fileResponse[0] = 73
+fileResponse[1] = 126
+fileResponse[2] = 2
+while True:
+    conn, addr = s.accept()
+    s.settimeout(1)
+    print(str(addr) + " has connected to the server at " + str(datetime.datetime.now()))
+    
+    try:
+        frq = bytearray(conn.recv(88))
+
+        n = (int(str(frq[3]) + str(frq[4])))
+        if (frq[0] == 73 and frq[1] == 126 and frq[2] == 1 and 
+             n <= 1024 and n >= 1):
+            try:
+                arrayname = frq[5:]
+                name = arrayname.decode('utf-8')  
+                break
+            except IndexError:
+                fileResponse[3] = 0 
+                fileResponse[4:] = 0
+                conn.send(fileResponse)  
+                conn.close()
+                sys.exit("Lengh of filename not correct")
+    except socket.timeout:
+        sys.exit("Socket timeout")
+            
+    except socket.error:
+        fileResponse[0] = 1 
+        fileResponse[3] = 0
+        fileResponse[4:] = [0,0,0,0]
+        conn.send(fileResponse)                  
+        conn.close()
+        sys.exit("Erronous file request received")
+        
+try:
+    file = open(name, 'rb')
+    size = os.stat(name).st_size
+    
+    strhexnum = str(hex(size))[2:]
+    while len(strhexnum) < 8:
+        strhexnum = '0' + strhexnum
+    for i in range(0, len(strhexnum) - 1, 2):
+        fileResponse.append(int(strhexnum[i:i+2], 16))
+    
+except FileNotFoundError:
+    s.close()
+    fileResponse[3] = 0
+    fileResponse[4:] = [0, 0, 0, 0]
+    conn.send(fileResponse)
+    sys.exit("Requested file not found on server or could not be opened")
+        
+fileResponse[3] = 1 
+conn.send(fileResponse)
+
+msgData = file.read(size)    
+
+try:
+    conn.send(msgData)
+    print("Data has been transmitted to client")
+except socket.timeout:
+    sys.exit("Socket timed out")
+except:
+    sys.exit("Couldn't send data")
+    
+file.close()   
+conn.close()
+    
+    
