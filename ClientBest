@@ -1,0 +1,92 @@
+import socket
+import sys
+
+
+IP = sys.argv[1]
+for i in range(0, len(IP)):
+    if (IP[i].isnumeric() != True and IP[i] != '.'):
+        try:
+            IP = socket.gethostbyname(IP)
+        except:
+            pass
+        else:
+            sys.exit("Invalid IP/Host name entry")
+    break
+
+try:
+    PORT = int(sys.argv[2])
+    
+except ValueError:
+    sys.exit("Invalid Port number")
+else:
+    if (int(sys.argv[2]) < 1024 or int(sys.argv[2]) > 64000):
+        sys.exit("Port number outside range")
+
+HOST = sys.argv[3]
+
+try:
+    s = socket.socket()
+except socket.error:
+    sys.exit("Could not create socket")
+    
+try:
+    s.connect((HOST, PORT))
+except ConnectionRefusedError:
+    sys.exit("Failed to connect to server")
+
+
+
+fixedRequestHeader = '497E01'
+poop = fixedRequestHeader.encode('utf-8')
+name = input(str("Enter the file to be requested: "))
+nameArray = name.encode('utf-8')
+size = str(len(nameArray))
+fileRequest = bytearray(len(nameArray) + 5)
+if int(size) > 255:
+    size1 = int(size[:2])
+    size2 = int(size[2:])
+else:
+    size1 = 0
+    size2 = int(size)    
+
+
+fileRequest[0] = 73
+fileRequest[1] = 126
+fileRequest[2] = 1
+fileRequest[3] = size1
+fileRequest[4] = size2
+j = 5
+for i in range(0,len(nameArray)):
+    fileRequest[j] = nameArray[i]
+    j += 1
+
+s.send(fileRequest)   
+size = ''
+frp = s.recv(32)
+if (frp[0] == 73 and frp[1] == 126 and frp[2] == 2):
+    if frp[3] == 1:
+        for i in range(4, 8, 1):
+            size += str(hex(frp[i])[2:])
+        size = int(size, 16)
+    else: 
+        sys.exit("Problem opening the requested file on the server")
+else:
+    sys.exit("Problem with the file request record sent to server")
+
+while True:
+    filename = input(str("Enter name of incoming file: "))
+    file = open(filename, 'wb')    
+    block = s.recv(4096)
+    bitcount = len(block)
+    while block: 
+        file.write(block)
+        block = s.recv(4096)
+        bitcount += len(block)
+    if size != bitcount:
+        sys.exit("The number of bits received is not equal to the number of bits indicated in the file response header")
+    file.close()
+    print("File successfully received and " + str(size) + " bits were written to: " + filename)
+    break
+    
+
+    
