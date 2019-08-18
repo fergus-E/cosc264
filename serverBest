@@ -1,0 +1,84 @@
+import socket
+import time
+import sys
+import os
+
+try:
+    PORT = int(sys.argv[1])
+except ValueError:
+    sys.exit("Invalid Port number")
+else:
+    if (int(sys.argv[1]) < 1024 or int(sys.argv[1]) > 64000):
+        sys.exit("Port number outside range")
+
+try:
+    s = socket.socket()
+    s.bind((socket.gethostname(), PORT))
+except socket.error:
+    sys.exit("Error initialising socket")
+
+
+s.listen(0)  
+print("Server is waiting for connections..")
+fileResponse = bytearray(4)
+fileResponse[0] = 73
+fileResponse[1] = 126
+fileResponse[2] = 2
+while True:
+    conn, addr = s.accept()
+    s.settimeout(None)
+    print(addr, "has connected to the server at", str(time.time))
+    
+    try:
+        frq = bytearray(conn.recv(88))
+
+        n = (int(str(frq[3]) + str(frq[4])))
+        if (frq[0] == 73 and frq[1] == 126 and frq[2] == 1 and 
+             n <= 1024 and n >= 1):
+            try:
+                arrayname = frq[5:]
+                name = arrayname.decode('utf-8')  
+                break
+            except IndexError:
+                fileResponse[3] = 0 
+                fileResponse[4:] = 0
+                conn.send(fileResponse)  
+                conn.close()
+                sys.exit("Lengh of filename not correct")
+            
+    except socket.error:
+        fileResponse[0] = 1 
+        fileResponse[3] = 0
+        fileResponse[4:] = 0
+        conn.send(fileResponse)                  
+        conn.close()
+        sys.exit("Erronous file request received")
+        
+try:
+    file = open(name, 'rb')
+    size = os.stat(name).st_size
+    
+    strhexnum = str(hex(size))[2:]
+    while len(strhexnum) < 8:
+        strhexnum = '0' + strhexnum
+    for i in range(0, len(strhexnum) - 1, 2):
+        fileResponse.append(int(strhexnum[i:i+2], 16))
+    
+except FileNotFoundError:
+    s.close()
+    fileResponse[3] = 0
+    fileResponse[4:] = 0
+    conn.send(fileResponse)
+    sys.exit("Requested file not found on server or could not be opened")
+        
+fileResponse[3] = 1 
+conn.send(fileResponse)
+
+msgData = file.read(size)    
+
+try:
+    conn.send(msgData)
+    print("Data has been transmitted succesfully to client")
+    
+file.close()   
+conn.close()
